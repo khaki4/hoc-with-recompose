@@ -1,79 +1,60 @@
-import React from "react";
+import React, { Component } from "react";
 import { render } from "react-dom";
-import { compose, withReducer, withHandlers } from "recompose";
+import { mapProps, lifecycle } from "recompose";
 import './index.css';
-
 /*
 TITLE:
-Add Local State to a Functional Stateless Component using Recompose
+Transform Props using Recompose
 
 DESCRIPTION:
-Learn how to use the 'withState' and 'withHandlers' higher order
-components to easily add local state to your functional stateless
-components. No need for classes!
+Learn how to use the 'mapProps' higher-order component to modify an
+existing component’s API (its props). 'mapProps' takes incoming props
+and changes them however you’d like; for example, filtering the props
+by a field.
 */
-const { Component } = React;
 
-const withToggle = compose(
-  withReducer(
-    "toggledOn",
-    "dispatch",
-    (state, action) => {
-      switch (action.type) {
-        case "SHOW":
-          return true;
-        case "HIDE":
-          return false;
-        case "TOGGLE":
-          return !state;
-        default:
-          return state;
-      }
-    },
-    false
-  ),
-  withHandlers({
-    show: ({ dispatch }) => e => dispatch({ type: "SHOW" }),
-    hide: ({ dispatch }) => e => dispatch({ type: "HIDE" }),
-    toggle: ({ dispatch }) => e => dispatch({ type: "TOGGLE" })
-  })
-);
+const configPromise = fetchConfiguration();
 
-const StatusList = () => (
-  <div className="StatusList">
-    <div>pending</div>
-    <div>inactive</div>
-    <div>active</div>
-  </div>
-);
+const withConfig = lifecycle({
+  state: { config: {} },
+  componentDidMount() {
+    configPromise.then(config => this.setState({ config }));
+  }
+});
 
-const Status = withToggle(({ status, toggledOn, toggle }) => (
-  <span onClick={toggle}>
-    {status}
-    {toggledOn && <StatusList />}
-  </span>
-));
 
-const Tooltip = withToggle(({ text, children, toggledOn, show, hide }) => (
-  <span>
-    {toggledOn && <div className="Tooltip">{text}</div>}
-    <span onMouseEnter={show} onMouseLeave={hide}>
-      {children}
-    </span>
-  </span>
-));
 
-const User = ({ name, status }) => (
-  <div className="User">
-    <Tooltip text="Cool Dude!">{name}</Tooltip>—
-    <Status status={status} />
-  </div>
+const User = withConfig(({ name, status, config }) => {
+   return (
+     <div className="User">
+       { name }
+       { config.showStatus && '-' + status }
+       { config.canDeleteUsers && <button>x</button> }
+     </div>
+   );
+  }
 );
 
 const App = () => (
   <div>
-    <User name="Tim" status="active" />
+    <User
+      name="Tim"
+      status="actives"
+      showStatus
+      canDleteUsers
+    />
   </div>
 );
 
 export default App;
+
+const config = {
+  showStatus: true,
+  canDeleteUsers: true
+}
+
+function fetchConfiguration() {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(config), 300);
+  });
+}
